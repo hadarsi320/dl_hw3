@@ -1,12 +1,17 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+import utils
+
+EPS = 1e-20
 
 
 class JointVAE(nn.Module):
-    def __init__(self, latent_spec):
-
+    def __init__(self, latent_spec, temperature, hard=True):
         super(JointVAE, self).__init__()
 
+        self.hard = hard
+        self.temperature = temperature
         self.is_continuous = 'cont' in latent_spec
         self.is_discrete = 'disc' in latent_spec
 
@@ -124,22 +129,48 @@ class JointVAE(nn.Module):
         # (batch, 3, 64, 64)
 
         x = self.encoder(x)
-        # x = self.hidden_to_latent(x)
+        x = self.hidden_to_latent(x)
         x = self.decoder(x)
         return x
 
-    def hidden_to_latent(self, x):
+    def hidden_to_latent(self, encoding):
         latent = []
         if self.is_continuous:
-            mu = self.fc_mean(x)
-            log_var = self.fc_log_var(x)
-            self.cont_kl = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
-            sample = torch.randn_like(log_var)
-            latent.append(mu + sample * torch.exp(log_var / 2))
+            mu = self.fc_mean(encoding)
+            log_var = self.fc_log_var(encoding)
+            self.continuous_kl = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+            latent.append(self.sample_normal(mu, log_var))
         else:
-            self.cont_kl = 0
+            self.continuous_kl = 0
 
         if self.is_discrete:
+            for fc_alpha in self.fc_alphas:
+                latent.append(self.sample_gumbel_softmax(F.softmax(fc_alpha(encoding))))
             pass
 
         return torch.cat(latent)
+
+    def sample_normal(self, mu, log_var):
+        if self.training:
+            sample = torch.randn_like(log_var)
+            return mu + sample * torch.exp(log_var / 2)
+        return mu
+
+    def sample_gumbel_softmax(self, alphas):
+        if self.training:
+            log_alpha = torch.log(alphas + EPS)
+            gumbel_noise = utils.sample_gumbel(alphas.shape)
+            y_soft = F.softmax((log_alpha + gumbel_noise) / self.temperature, dim=1)
+
+            if self.hard:
+                k = torch.argmax(y_soft, dim=-1)
+                y_hard = F.one_hot(k, num_classes=alphas.shape[-1])
+                y = y_hard - y_soft.detach() + y_soft
+            else:
+                y = y_soft
+            return y
+
+        else:
+            k = torch.argmax(alphas, dim=-1)
+            y = F.one_hot(k, num_classes=alphas.shape[-1])
+            return y
