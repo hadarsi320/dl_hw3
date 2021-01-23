@@ -15,6 +15,7 @@ class JointVAE(nn.Module):
             self.latent_cont_dim = self.latent_spec['cont']
         else:
             self.latent_cont_dim = 0
+
         if self.is_discrete:
             self.latent_disc_dim = sum(self.latent_spec['disc'])
             self.num_disc_latents = len(self.latent_spec['disc'])
@@ -22,6 +23,9 @@ class JointVAE(nn.Module):
             self.latent_disc_dim = 0
             self.num_disc_latents = 0
         self.latent_dim = self.latent_cont_dim + self.latent_disc_dim
+
+        self.continuous_kl = 0
+        self.discrete_kl = 0
 
         self.encoder = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=32, kernel_size=(4, 4), stride=2, padding=1),
@@ -118,3 +122,24 @@ class JointVAE(nn.Module):
 
         # convtrans2d
         # (batch, 3, 64, 64)
+
+        x = self.encoder(x)
+        # x = self.hidden_to_latent(x)
+        x = self.decoder(x)
+        return x
+
+    def hidden_to_latent(self, x):
+        latent = []
+        if self.is_continuous:
+            mu = self.fc_mean(x)
+            log_var = self.fc_log_var(x)
+            self.cont_kl = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+            sample = torch.randn_like(log_var)
+            latent.append(mu + sample * torch.exp(log_var / 2))
+        else:
+            self.cont_kl = 0
+
+        if self.is_discrete:
+            pass
+
+        return torch.cat(latent)
