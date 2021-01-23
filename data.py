@@ -17,11 +17,11 @@ def main():
                                  download=False)  # make sure you set it to False
 
     train_loader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-
+    resize = Resize((64, 64))
     for i, (x, y) in tqdm(enumerate(train_dataset)):
         if i == 100:
             break
-        x = Resize((64, 64))(x).unsqueeze(0)
+        x = resize(x).unsqueeze(0)
 
 
 if __name__ == '__main__':
