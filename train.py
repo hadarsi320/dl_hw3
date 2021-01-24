@@ -7,17 +7,6 @@ import matplotlib.pyplot as plt
 
 from modules.joint_vae import JointVAE
 
-"""
-Hyperparameters (from paper)
-    C.4  CelebA
-    Latent distribution: 32 continuous, 1 10-dimensional discrete
-    Optimizer: Adam with learning rate 5e-4
-    Batch size: 64
-    Epochs: 100
-    Cz: Increased linearly from 0 to 50 in 100000 iterations
-    Cc: Increased linearly from 0 to 10 in 100000 iterations
-"""
-
 
 def train_vae(model: JointVAE, log_dir, dataloader, num_epochs, optimizer, gamma, C_cont, C_disc, device):
     iteration = 0
@@ -78,7 +67,7 @@ def train_vae(model: JointVAE, log_dir, dataloader, num_epochs, optimizer, gamma
 def report_metrics(epoch, metrics):
     string = f"Epoch: {epoch:3d}\t"
     for metric_name, values in metrics.items():
-        string += f"\t{metric_name:20} {sum(values) / len(values): 5.3f}"
+        string += f"\t{metric_name:20} {np.mean(values): 5.3f}"
     print(string)
 
 
@@ -88,6 +77,7 @@ def make_image_grid(path, epoch, images):
     plt.imshow(img)
     plt.title(f"epoch {epoch}")
     plt.savefig(f"{path}/faces_{epoch}.jpg")
+    plt.show()
     return img
 
 
@@ -108,17 +98,3 @@ def compute_loss(model: JointVAE, batch, reconst, gamma, C_cont, C_disc):
     else:
         disc_kl = np.nan
     return loss, reconstruction_loss, continuous_kl, disc_kl
-
-
-def tracked_images():
-    w = 28
-    img = []
-    for i, z2 in enumerate(np.linspace(r1[1], r1[0], n)):
-        for j, z1 in enumerate(np.linspace(*r0, n)):
-            z = torch.Tensor([[z1, z2]]).to(device)
-            x_hat = autoencoder.decoder(z)
-            img.append(x_hat)
-
-    img = torch.cat(img)
-    img = torchvision.utils.make_grid(img, nrow=12).permute(1, 2, 0).detach().numpy()
-    plt.imshow(img, extent=[*r0, *r1])

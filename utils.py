@@ -1,5 +1,8 @@
+import os
+
 import torch
-import torch.nn.functional as F
+
+from main import LOG_DIR
 
 
 def sample_gumbel(shape, eps=1e-20):
@@ -15,5 +18,9 @@ def get_capacity_func(min_val, max_val, total_iters):
                          ((max_val - min_val) * i / float(total_iters) + min_val))
 
 
-def mean(iterable):
-    return sum(iterable) / len(iterable)
+def log_run(model_name, model, hparams):
+    path = f"{LOG_DIR}/{model_name}"
+    os.mkdir(path)
+    with open(f"{path}/description.txt", "w") as f:
+        hparams_string = "\n".join([f"\t{k:30} {v}" for k, v in hparams.items()])
+        f.writelines([model_name, "\n\n", str(model), "\n\n", "hparams:\n", hparams_string])

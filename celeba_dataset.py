@@ -2,6 +2,7 @@ import os
 
 import torch
 from torch.utils.data import Dataset
+from tqdm import tqdm
 
 
 class CelebADataset(Dataset):
@@ -13,7 +14,7 @@ class CelebADataset(Dataset):
     def load_images(self):
         images = []
         labels = []
-        for file in os.listdir(self.data_dir):
+        for file in tqdm(os.listdir(self.data_dir), desc="load_images"):
             image, label = torch.load(f'{self.data_dir}/{file}')
             images.append(image)
             labels.append(label)

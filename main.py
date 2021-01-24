@@ -5,17 +5,17 @@ You should submit a Zip ( not Rar! ) file containing:
     - Saved model: .pkl file (If the file is too big for the Moodle, upload it to your Google-Drive and copy the link
       to your pdf report)
 """
-import os
 from time import strftime
 
-import matplotlib.pyplot as plt
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 
 import utils
 from celeba_dataset import CelebADataset
 from modules.joint_vae import JointVAE
-from train_model_new import train_vae
+from plotting import plot_metrics
+from train import train_vae
+from utils import log_run
 
 LOG_DIR = "./logs"
 
@@ -27,28 +27,10 @@ def reproduce_hw3():
     """
 
 
-def log_run(model_name, model, hparams):
-    path = f"{LOG_DIR}/{model_name}"
-    os.mkdir(path)
-    with open(f"{path}/description.txt", "w") as f:
-        hparams_string = "\n".join([f"\t{k:30} {v}" for k, v in hparams.items()])
-        f.writelines([model_name, "\n\n", str(model), "\n\n", "hparams:\n", hparams_string])
-
-
-def main():
-    prefix = "debug"
+def main(hparams):
+    prefix = "full"
     model_name = f"{prefix}__{strftime('%Y_%m_%d__%H_%M_%S')}"
     device = "cuda"
-    hparams = {
-        "latent_spec": {'cont': 10, 'disc': [3]},
-        "temperature": 0.66,
-        "batch_size": 128,
-        "lr": 5e-4,
-        "epochs": 100,
-        "gamma": 100,
-        "C_cont": {"min_val": 0, "max_val": 10, "total_iters": 1e5},
-        "C_disc": {"min_val": 0, "max_val": 50, "total_iters": 1e5},
-    }
 
     model = JointVAE(
         latent_spec=hparams["latent_spec"],
@@ -73,7 +55,7 @@ def main():
     )
 
     path = f"{LOG_DIR}/{model_name}"
-    metrics, image_grids = train_vae(
+    metrics, _ = train_vae(
         model=model,
         log_dir=path,
         dataloader=train_loader,
@@ -85,14 +67,76 @@ def main():
         device=device
     )
 
-    for metric_name, values in metrics.items():
-        plt.plot(values)
-        plt.title(f"{metric_name} vs. epochs")
-        plt.ylabel(metric_name)
-        plt.xlabel("epochs")
-        plt.savefig(f"{path}/{metric_name}.jpg")
-        plt.show()
+    plot_metrics(path, metrics)
 
 
 if __name__ == '__main__':
-    main()
+    # run 1: paper hyper parameters with different batch sizes
+    hparams = {
+        "latent_spec": {'cont': 32, 'disc': [10]},
+        "temperature": 0.67,
+        "batch_size": 64,
+        "lr": 5e-4,
+        "epochs": 100,
+        "gamma": 100,
+        "C_cont": {"min_val": 0, "max_val": 10, "total_iters": 100000},
+        "C_disc": {"min_val": 0, "max_val": 50, "total_iters": 100000},
+    }
+    main(hparams)
+
+    # run 2: check how temp affects, low epochs so we don't waste time
+    for temp in [0.1, 0.33, 1, 5]:
+        hparams = {
+            "latent_spec": {'cont': 32, 'disc': [10]},
+            "temperature": temp,
+            "batch_size": 64,
+            "lr": 5e-4,
+            "epochs": 30,
+            "gamma": 100,
+            "C_cont": {"min_val": 0, "max_val": 10, "total_iters": 100000},
+            "C_disc": {"min_val": 0, "max_val": 50, "total_iters": 100000},
+        }
+        main(hparams)
+
+    # run 3: check how gamma affects, low epochs so we don't waste time
+    for gamma in [1, 10, 100, 1000]:
+        hparams = {
+            "latent_spec": {'cont': 32, 'disc': [10]},
+            "temperature": 0.67,
+            "batch_size": 64,
+            "lr": 5e-4,
+            "epochs": 30,
+            "gamma": gamma,
+            "C_cont": {"min_val": 0, "max_val": 10, "total_iters": 100000},
+            "C_disc": {"min_val": 0, "max_val": 50, "total_iters": 100000},
+        }
+        main(hparams)
+
+    # run 4: check how latent_spec affects, VERY low epochs so we don't waste time
+    for cont in [1, 2, 4, 32, 64]:
+        for disc in [[10], [2], [2] * 40]:
+            hparams = {
+                "latent_spec": {'cont': cont, 'disc': disc},
+                "temperature": 0.67,
+                "batch_size": 64,
+                "lr": 5e-4,
+                "epochs": 10,
+                "gamma": 100,
+                "C_cont": {"min_val": 0, "max_val": 10, "total_iters": 100000},
+                "C_disc": {"min_val": 0, "max_val": 50, "total_iters": 100000},
+            }
+            main(hparams)
+
+    # run 5: check how C_cont affects, low epochs so we don't waste time
+    for max_Cc in [1, 10, 100, 1000]:
+        hparams = {
+            "latent_spec": {'cont': 32, 'disc': [10]},
+            "temperature": 0.67,
+            "batch_size": 64,
+            "lr": 5e-4,
+            "epochs": 30,
+            "gamma": 100,
+            "C_cont": {"min_val": 0, "max_val": max_Cc, "total_iters": 100000},
+            "C_disc": {"min_val": 0, "max_val": 50, "total_iters": 100000},
+        }
+        main(hparams)
