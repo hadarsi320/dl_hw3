@@ -1,3 +1,7 @@
+import os
+import sys
+from ctypes import sizeof
+
 import torch
 import torchvision.datasets as dsets
 from torch.utils.data import DataLoader
@@ -19,26 +23,7 @@ LEARNING_RATE = 5e-4
 
 
 def main():
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    transforms = Compose([ToTensor()])
-    train_dataset = dsets.CelebA(root='/datashare/',
-                                 split='train', transform=transforms,
-                                 download=False)  # make sure you set it to False
-
-    # train_loader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-    resize = Resize((64, 64))
-
-    # latent_space = {'cont': 32, 'disc': [10]}
-    latent_space = {'disc': [10]}
-    model = JointVAE(latent_space, TEMP, device)
-    model.to(device)
-
-    for i, (x, _) in tqdm(enumerate(train_dataset), total=100):
-        if i == 100:
-            break
-        x = resize(x).unsqueeze(0).to(device)
-        rec = model(x)
+    pass
 
 
 if __name__ == '__main__':

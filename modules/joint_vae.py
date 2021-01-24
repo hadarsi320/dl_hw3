@@ -9,13 +9,12 @@ EPS = 1e-20
 
 
 class JointVAE(nn.Module):
-    def __init__(self, latent_spec, temperature, device=None, hard=True, hidden_dim=256):
+    def __init__(self, latent_spec, temperature, hard=True, hidden_dim=256):
         super(JointVAE, self).__init__()
 
         self.hard = hard
         self.temperature = temperature
         self.hidden_dim = hidden_dim
-        # self.device = device
         self.latent_spec = latent_spec
         self.max_disc_capacity = sum([math.log(dim) for dim in self.latent_spec['disc']])
 
@@ -39,7 +38,7 @@ class JointVAE(nn.Module):
             self.num_disc_latents = 0
         self.latent_dim = self.latent_cont_dim + self.latent_disc_dim
 
-        self.encoder = nn.Sequential(
+        self._encoder = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=32, kernel_size=(4, 4), stride=2, padding=1),
             nn.ReLU(),
             nn.Conv2d(in_channels=32, out_channels=32, kernel_size=(4, 4), stride=2, padding=1),
@@ -65,9 +64,9 @@ class JointVAE(nn.Module):
                     nn.Linear(self.hidden_dim, disc_dim),
                     nn.Softmax(dim=1)
                 ))
-            self.fc_alphas = nn.ModuleList(fc_alphas)
+            self._fc_alphas = nn.ModuleList(fc_alphas)
 
-        self.decoder = nn.Sequential(
+        self._decoder = nn.Sequential(
             nn.Linear(self.latent_dim, 256),
             nn.ReLU(),
             nn.Linear(256, 64 * 4 * 4),
@@ -84,10 +83,18 @@ class JointVAE(nn.Module):
         )
 
     def forward(self, x):
-        x = self.encoder(x)
+        x = self._encoder(x)
         x = self.hidden_to_latent(x)
-        x = self.decoder(x)
+        x = self._decoder(x)
         return x
+
+    def get_latent(self, x):
+        x = self._encoder(x)
+        x = self.hidden_to_latent(x)
+        return x
+
+    def decode(self, x):
+        return self._decoder(x)
 
     def hidden_to_latent(self, encoding):
         latent = []
@@ -99,7 +106,7 @@ class JointVAE(nn.Module):
 
         self.discrete_kl = 0
         if self.is_discrete:
-            for fc_alpha in self.fc_alphas:
+            for fc_alpha in self._fc_alphas:
                 alpha = fc_alpha(encoding)
                 latent.append(self.sample_gumbel_softmax(alpha))
                 # compute discrete KL
