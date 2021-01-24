@@ -2,9 +2,7 @@ import os
 
 import torch
 import torchvision.datasets as dsets
-from torch.utils.data import DataLoader
 from torchvision.transforms import ToTensor, Compose, Resize
-
 from tqdm import tqdm
 
 BATCH_SIZE = 64
@@ -19,8 +17,9 @@ def main():
 
     if not os.path.exists(data_dir):
         os.mkdir(data_dir)
-    for i, (x, _) in tqdm(enumerate(train_dataset), total=len(train_dataset), desc='Saving Images'):
-        torch.save(x, '{}/{}.pt'.format(data_dir, str(i).zfill(6)))
+
+    for i, (x, y) in tqdm(enumerate(train_dataset), total=len(train_dataset), desc='Saving Images'):
+        torch.save((x, y.bool()), '{}/{}.pt'.format(data_dir, str(i).zfill(6)))
 
 
 if __name__ == '__main__':
