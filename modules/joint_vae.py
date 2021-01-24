@@ -9,7 +9,7 @@ EPS = 1e-20
 
 
 class JointVAE(nn.Module):
-    def __init__(self, latent_spec, temperature, device, hard=True, hidden_dim=256):
+    def __init__(self, latent_spec, temperature, device=None, hard=True, hidden_dim=256):
         super(JointVAE, self).__init__()
 
         self.hard = hard
@@ -17,6 +17,8 @@ class JointVAE(nn.Module):
         self.hidden_dim = hidden_dim
         self.device = device
         self.latent_spec = latent_spec
+        self.max_disc_capacity = sum([math.log(dim) for dim in self.latent_spec['disc']])
+
         self.continuous_kl = 0
         self.discrete_kl = 0
 
@@ -64,14 +66,6 @@ class JointVAE(nn.Module):
                     nn.Softmax(dim=1)
                 ))
             self.fc_alphas = nn.ModuleList(fc_alphas)
-
-        # # Map latent samples to features to be used by generative model
-        # self.latent_to_features = nn.Sequential(
-        #     nn.Linear(self.latent_dim, self.hidden_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(self.hidden_dim, 64 * 4 * 4),
-        #     nn.ReLU()
-        # )
 
         self.decoder = nn.Sequential(
             nn.Linear(self.latent_dim, 256),
@@ -184,12 +178,5 @@ class JointVAE(nn.Module):
             y = F.one_hot(k, num_classes=alpha.shape[-1])
             return y
 
-    @staticmethod
-    def compute_discrete_kl(alpha):
-        dim = alpha.shape[0]
-        log_dim = math.log(dim)
-        mean_neg_entropy = torch.mean(torch.sum(alpha * torch.log(alpha + EPS), dim=1), dim=0)
-        return log_dim + mean_neg_entropy
-
     def get_max_disc_capacity(self):
-        return sum([math.log(dim) for dim in self.latent_spec['disc']])
+        return self.max_disc_capacity
