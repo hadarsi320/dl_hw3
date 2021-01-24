@@ -2,8 +2,6 @@ import os
 
 import torch
 
-from main import LOG_DIR
-
 
 def sample_gumbel(shape, eps=1e-20):
     # Sample from Gumbel(0, 1)
@@ -18,8 +16,8 @@ def get_capacity_func(min_val, max_val, total_iters):
                          ((max_val - min_val) * i / float(total_iters) + min_val))
 
 
-def log_run(model_name, model, hparams):
-    path = f"{LOG_DIR}/{model_name}"
+def log_run(log_dir, model_name, model, hparams):
+    path = f"{log_dir}/{model_name}"
     os.mkdir(path)
     with open(f"{path}/description.txt", "w") as f:
         hparams_string = "\n".join([f"\t{k:30} {v}" for k, v in hparams.items()])

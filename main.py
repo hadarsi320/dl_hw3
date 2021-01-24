@@ -39,7 +39,7 @@ def main(hparams):
 
     num_params = sum([p.numel() for p in model.parameters()])
     print(f"Num params: {num_params}")
-    log_run(model_name, model, hparams)
+    log_run(LOG_DIR, model_name, model, hparams)
 
     train_dataset = CelebADataset('celeba_resized')
 
