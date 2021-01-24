@@ -84,51 +84,6 @@ class JointVAE(nn.Module):
         )
 
     def forward(self, x):
-        # input:
-        # (batch, 3, 64, 64)
-
-        # conv2d
-        # (batch, 32, 32, 32)
-
-        # conv2d
-        # (batch, 32, 16, 16)
-
-        # conv2d
-        # (batch, 64, 8, 8)
-
-        # conv2d
-        # (batch, 64, 4, 4)
-
-        # flatten start from 1
-
-        # linear
-        # (batch, 256)
-
-        # ???
-        # sampling
-        # reparameterization
-        # ???
-
-        # linear
-        # (batch, 256)
-
-        # linear
-        # (batch, 64 * 4 * 4)
-
-        # flatten transpose (64, 4, 4)
-
-        # convtrans2d
-        # (batch, 64, 8, 8)
-
-        # convtrans2d
-        # (batch, 32, 16, 16)
-
-        # convtrans2d
-        # (batch, 32, 32, 32)
-
-        # convtrans2d
-        # (batch, 3, 64, 64)
-
         x = self.encoder(x)
         x = self.hidden_to_latent(x)
         x = self.decoder(x)
@@ -152,7 +107,7 @@ class JointVAE(nn.Module):
                 mean_neg_entropy = torch.mean(torch.sum(alpha * torch.log(alpha + EPS), dim=1), dim=0)
                 self.discrete_kl += log_dim + mean_neg_entropy
 
-        return torch.cat(latent, dim=1)  # TODO Eldar: dim=1
+        return torch.cat(latent, dim=1)
 
     def sample_normal(self, mu, log_var):
         if self.training:

@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor, Resize
 
 import utils
+from celeba_dataset import CelebADataset
 from foobar import BATCH_SIZE
 from modules.joint_vae import JointVAE
 from train_model import train_vae
@@ -27,15 +28,10 @@ def reproduce_hw3():
 if __name__ == '__main__':
     model = JointVAE(
         latent_spec={'cont': 10, 'disc': [3]},
-        temperature=10,
+        temperature=0.66,
     ).to('cuda')
-
-    train_dataset = dsets.CelebA(
-        root='/datashare/',
-        split='train',
-        transform=Compose([ToTensor(), Resize((64, 64))]),
-        download=False
-    )
+    print(f"Num params: {sum([p.numel() for p in model.parameters()])}")
+    train_dataset = CelebADataset('celeba_resized')
 
     train_loader = DataLoader(
         dataset=train_dataset,
@@ -45,7 +41,7 @@ if __name__ == '__main__':
 
     optimizer = Adam(
         params=model.parameters(),
-        lr=5e-4,
+        lr=1e-3,
     )
 
     train_vae(

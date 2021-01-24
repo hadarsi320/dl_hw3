@@ -28,28 +28,22 @@ def train_vae(model: JointVAE, dataloader, num_epochs, optimizer, gamma, C_cont,
 
 def train_epoch(model, dataloader, optimizer, gamma, C_cont, C_disc, iteration, device):
     loss_list = []
-    for batch_idx, (batch, _) in enumerate(dataloader):
+    for batch_idx, batch in enumerate(dataloader):
         batch = batch.to(device)
         iter_loss = train_iteration(model, optimizer, gamma, C_cont, C_disc, iteration, batch)
         loss_list.append(iter_loss.item())
         iteration += 1
-        # TODO DEBUG
-        if batch_idx >= 2:
-            break
     return loss_list, iteration
 
 
 def train_iteration(model, optimizer: optim.Optimizer, gamma, C_cont, C_disc, iteration, batch):
     optimizer.zero_grad()
     reconst = model(batch)
-    # TODO Eldar: DEBUG
-    # orig_img = batch[1].detach().cpu().permute(1, 2, 0).numpy()
-    # matplotlib.pyplot.imshow(orig_img)
-    # matplotlib.pyplot.show()
+
     reconst_img = reconst[1].detach().cpu().permute(1, 2, 0).numpy()
     matplotlib.pyplot.imshow(reconst_img)
     matplotlib.pyplot.show()
-    # END OF DEBUG
+
     loss = compute_loss(model, batch, reconst, gamma, C_cont(iteration), C_disc(iteration))
     loss.backward()
     optimizer.step()
