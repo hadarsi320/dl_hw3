@@ -15,7 +15,7 @@ class JointVAE(nn.Module):
         self.hard = hard
         self.temperature = temperature
         self.hidden_dim = hidden_dim
-        self.device = device
+        # self.device = device
         self.latent_spec = latent_spec
         self.max_disc_capacity = sum([math.log(dim) for dim in self.latent_spec['disc']])
 
@@ -139,7 +139,7 @@ class JointVAE(nn.Module):
         if self.is_continuous:
             mu = self.fc_mean(encoding)
             log_var = self.fc_log_var(encoding)
-            self.continuous_kl = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+            self.continuous_kl = - 0.5 * torch.mean(torch.sum(1 + log_var - mu.pow(2) - log_var.exp(), dim=1), dim=0)
             latent.append(self.sample_normal(mu, log_var))
 
         self.discrete_kl = 0
@@ -147,11 +147,12 @@ class JointVAE(nn.Module):
             for fc_alpha in self.fc_alphas:
                 alpha = fc_alpha(encoding)
                 latent.append(self.sample_gumbel_softmax(alpha))
+                # compute discrete KL
                 log_dim = math.log(alpha.shape[1])
                 mean_neg_entropy = torch.mean(torch.sum(alpha * torch.log(alpha + EPS), dim=1), dim=0)
                 self.discrete_kl += log_dim + mean_neg_entropy
 
-        return torch.cat(latent)
+        return torch.cat(latent, dim=1)  # TODO Eldar: dim=1
 
     def sample_normal(self, mu, log_var):
         if self.training:
