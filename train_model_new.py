@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as F
 import torchvision
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 from modules.joint_vae import JointVAE
 
@@ -36,16 +37,13 @@ def train_vae(model: JointVAE, log_dir, dataloader, num_epochs, optimizer, gamma
         }
         epoch_images = []
         for batch_idx, (batch, _) in enumerate(dataloader):
-            if batch_idx == 1e5:
-                break
-
             batch = batch.to(device)
 
             optimizer.zero_grad()
             reconst = model(batch)
 
-            if batch_idx % 1e4 == 0:
-                reconst_img = reconst[0]
+            if batch_idx % 1e2 == 0:
+                reconst_img = reconst[0].unsqueeze(0)
                 epoch_images.append(reconst_img)
 
             iter_loss, reconstruction_loss, continuous_kl, disc_kl = compute_loss(
@@ -67,7 +65,7 @@ def train_vae(model: JointVAE, log_dir, dataloader, num_epochs, optimizer, gamma
         metrics["continuous_kl"].append(np.mean(epoch_metrics["continuous_kl"]))
         metrics["disc_kl"].append(np.mean(epoch_metrics["disc_kl"]))
 
-        image_grids.append(make_image_grid(epoch_images))
+        image_grids.append(make_image_grid(log_dir, epoch, epoch_images))
         torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
@@ -84,8 +82,13 @@ def report_metrics(epoch, metrics):
     print(string)
 
 
-def make_image_grid(images, nrow=4):
-    return torchvision.utils.make_grid(torch.cat(images[:nrow ** 2]), nrow=nrow).detach().cpu().permute(1, 2, 0).numpy()
+def make_image_grid(path, epoch, images):
+    nrow = np.math.floor(np.sqrt(len(images)))
+    img = torchvision.utils.make_grid(torch.cat(images[:nrow ** 2]), nrow=nrow).detach().cpu().permute(1, 2, 0).numpy()
+    plt.imshow(img)
+    plt.title(f"epoch {epoch}")
+    plt.savefig(f"{path}/faces_{epoch}.jpg")
+    return img
 
 
 def compute_loss(model: JointVAE, batch, reconst, gamma, C_cont, C_disc):

@@ -44,7 +44,7 @@ def main():
         "temperature": 0.66,
         "batch_size": 128,
         "lr": 5e-4,
-        "epochs": 10,
+        "epochs": 100,
         "gamma": 100,
         "C_cont": {"min_val": 0, "max_val": 10, "total_iters": 1e5},
         "C_disc": {"min_val": 0, "max_val": 50, "total_iters": 1e5},
@@ -72,9 +72,10 @@ def main():
         lr=hparams["lr"],
     )
 
+    path = f"{LOG_DIR}/{model_name}"
     metrics, image_grids = train_vae(
         model=model,
-        log_dir=f"{LOG_DIR}/{model_name}",
+        log_dir=path,
         dataloader=train_loader,
         num_epochs=hparams["epochs"],
         optimizer=optimizer,
@@ -89,11 +90,7 @@ def main():
         plt.title(f"{metric_name} vs. epochs")
         plt.ylabel(metric_name)
         plt.xlabel("epochs")
-        plt.show()
-
-    for epoch, img in enumerate(image_grids):
-        plt.imshow(img)
-        plt.title(f"epoch {epoch}")
+        plt.savefig(f"{path}/{metric_name}.jpg")
         plt.show()
 
 
