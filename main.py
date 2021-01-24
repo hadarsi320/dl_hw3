@@ -8,17 +8,14 @@ You should submit a Zip ( not Rar! ) file containing:
 import os
 from time import strftime
 
-import torchvision.datasets as dsets
-from numpy.ma import arange
+import matplotlib.pyplot as plt
+from torch.optim import Adam
 from torch.utils.data import DataLoader
-from torchvision.transforms import Compose, ToTensor, Resize
 
 import utils
 from celeba_dataset import CelebADataset
 from modules.joint_vae import JointVAE
 from train_model_new import train_vae
-from torch.optim import Adam
-
 
 LOG_DIR = "./logs"
 
@@ -47,7 +44,7 @@ def main():
         "temperature": 0.66,
         "batch_size": 128,
         "lr": 5e-4,
-        "epochs": 2,
+        "epochs": 10,
         "gamma": 100,
         "C_cont": {"min_val": 0, "max_val": 10, "total_iters": 1e5},
         "C_disc": {"min_val": 0, "max_val": 50, "total_iters": 1e5},
@@ -87,9 +84,17 @@ def main():
         device=device
     )
 
-    for metrics_dict in metrics:
+    for metric_name, values in metrics.items():
+        plt.plot(values)
+        plt.title(f"{metric_name} vs. epochs")
+        plt.ylabel(metric_name)
+        plt.xlabel("epochs")
+        plt.show()
 
-
+    for epoch, img in enumerate(image_grids):
+        plt.imshow(img)
+        plt.title(f"epoch {epoch}")
+        plt.show()
 
 
 if __name__ == '__main__':

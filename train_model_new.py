@@ -36,7 +36,7 @@ def train_vae(model: JointVAE, log_dir, dataloader, num_epochs, optimizer, gamma
         }
         epoch_images = []
         for batch_idx, (batch, _) in enumerate(dataloader):
-            if batch_idx == 100:
+            if batch_idx == 1e5:
                 break
 
             batch = batch.to(device)
@@ -62,10 +62,10 @@ def train_vae(model: JointVAE, log_dir, dataloader, num_epochs, optimizer, gamma
             iteration += 1
 
         report_metrics(epoch, epoch_metrics)
-        metrics["iter_losses"].append(np.mean(epoch_metrics["iter_loss"]))
-        metrics["reconstruction_losssz"].append(np.mean(epoch_metrics["reconstruction_loss"]))
-        metrics["continuous_kls"].append(np.mean(epoch_metrics["continuous_kl"]))
-        metrics["disc_kls"].append(np.mean(epoch_metrics["disc_kl"]))
+        metrics["loss"].append(np.mean(epoch_metrics["iter_loss"]))
+        metrics["reconstruction_loss"].append(np.mean(epoch_metrics["reconstruction_loss"]))
+        metrics["continuous_kl"].append(np.mean(epoch_metrics["continuous_kl"]))
+        metrics["disc_kl"].append(np.mean(epoch_metrics["disc_kl"]))
 
         image_grids.append(make_image_grid(epoch_images))
         torch.save({
