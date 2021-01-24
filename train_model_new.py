@@ -18,28 +18,35 @@ Hyperparameters (from paper)
 """
 
 
-def train_vae(model: JointVAE, model_name, log_dir, dataloader, num_epochs, optimizer, gamma, C_cont, C_disc, device):
+def train_vae(model: JointVAE, log_dir, dataloader, num_epochs, optimizer, gamma, C_cont, C_disc, device):
     iteration = 0
-    metrics = []  # will hold a dict for each epoch with the metrics
+    metrics = {  # will hold a dict for each epoch with the metrics
+        "loss": [],
+        "reconstruction_loss": [],
+        "continuous_kl": [],
+        "disc_kl": [],
+    }
     image_grids = []  # will hold random 16 images to see progress
     for epoch in range(num_epochs):
         epoch_metrics = {
-            "total_loss": [],
+            "iter_loss": [],
             "reconstruction_loss": [],
             "continuous_kl": [],
             "disc_kl": [],
         }
         epoch_images = []
-        for batch_idx, batch in tqdm(enumerate(dataloader), desc="batch"):
+        for batch_idx, (batch, _) in enumerate(dataloader):
+            if batch_idx == 100:
+                break
+
             batch = batch.to(device)
 
             optimizer.zero_grad()
             reconst = model(batch)
 
             if batch_idx % 1e4 == 0:
-                orig_img = batch[0].detach().cpu().permute(1, 2, 0).numpy()  # redundant after 1 epoch
-                reconst_img = reconst[0].detach().cpu().permute(1, 2, 0).numpy()
-                epoch_images.append((orig_img, reconst_img))
+                reconst_img = reconst[0]
+                epoch_images.append(reconst_img)
 
             iter_loss, reconstruction_loss, continuous_kl, disc_kl = compute_loss(
                 model, batch, reconst, gamma, C_cont(iteration), C_disc(iteration)
@@ -55,7 +62,11 @@ def train_vae(model: JointVAE, model_name, log_dir, dataloader, num_epochs, opti
             iteration += 1
 
         report_metrics(epoch, epoch_metrics)
-        metrics.append(epoch_metrics)
+        metrics["iter_losses"].append(np.mean(epoch_metrics["iter_loss"]))
+        metrics["reconstruction_losssz"].append(np.mean(epoch_metrics["reconstruction_loss"]))
+        metrics["continuous_kls"].append(np.mean(epoch_metrics["continuous_kl"]))
+        metrics["disc_kls"].append(np.mean(epoch_metrics["disc_kl"]))
+
         image_grids.append(make_image_grid(epoch_images))
         torch.save({
             'epoch': epoch,
@@ -67,13 +78,14 @@ def train_vae(model: JointVAE, model_name, log_dir, dataloader, num_epochs, opti
 
 
 def report_metrics(epoch, metrics):
-    print(f"Epoch: {epoch}")
-    for metric_name, value in metrics.items():
-        print(f"\t{metric_name:20} {value:.3f}")
+    string = f"Epoch: {epoch:3d}\t"
+    for metric_name, values in metrics.items():
+        string += f"\t{metric_name:20} {sum(values) / len(values): 5.3f}"
+    print(string)
 
 
 def make_image_grid(images, nrow=4):
-    return torchvision.utils.make_grid(torch.cat(images[:nrow ** 2]), nrow=nrow).permute(1, 2, 0).detach().numpy()
+    return torchvision.utils.make_grid(torch.cat(images[:nrow ** 2]), nrow=nrow).detach().cpu().permute(1, 2, 0).numpy()
 
 
 def compute_loss(model: JointVAE, batch, reconst, gamma, C_cont, C_disc):
@@ -81,7 +93,7 @@ def compute_loss(model: JointVAE, batch, reconst, gamma, C_cont, C_disc):
     C_disc = min(C_disc, model.get_max_disc_capacity())
     reconstruction_loss = F.binary_cross_entropy(reconst, batch, reduction='sum') / reconst.size(0)
 
-    loss = reconstruction_loss
+    loss = reconstruction_loss.clone()
     if model.is_continuous:
         continuous_kl = model.continuous_kl
         loss += gamma * torch.abs(continuous_kl - C_cont)

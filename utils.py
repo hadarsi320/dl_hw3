@@ -13,3 +13,7 @@ def sample_gumbel(shape, eps=1e-20):
 def get_capacity_func(min_val, max_val, total_iters):
     return lambda i: min(max_val,
                          ((max_val - min_val) * i / float(total_iters) + min_val))
+
+
+def mean(iterable):
+    return sum(iterable) / len(iterable)

@@ -75,9 +75,8 @@ def main():
         lr=hparams["lr"],
     )
 
-    train_vae(
+    metrics, image_grids = train_vae(
         model=model,
-        model_name=model_name,
         log_dir=f"{LOG_DIR}/{model_name}",
         dataloader=train_loader,
         num_epochs=hparams["epochs"],
@@ -87,6 +86,10 @@ def main():
         C_disc=utils.get_capacity_func(**hparams["C_disc"]),
         device=device
     )
+
+    for metrics_dict in metrics:
+
+
 
 
 if __name__ == '__main__':
