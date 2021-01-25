@@ -1,11 +1,10 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import torch.nn.functional as F
 import torchvision
-from tqdm import tqdm
-import matplotlib.pyplot as plt
 
 from modules.joint_vae import JointVAE
+from nn_utils import compute_loss
 
 
 def train_vae(model: JointVAE, log_dir, dataloader, num_epochs, optimizer, gamma, C_cont, C_disc, device):
@@ -79,22 +78,3 @@ def make_image_grid(path, epoch, images):
     plt.savefig(f"{path}/faces_{epoch}.jpg")
     plt.clf()
     return img
-
-
-def compute_loss(model: JointVAE, batch, reconst, gamma, C_cont, C_disc):
-    # there might be errors which cause imbalance, maybe add some averages
-    C_disc = min(C_disc, model.get_max_disc_capacity())
-    reconstruction_loss = F.binary_cross_entropy(reconst, batch, reduction='sum') / reconst.size(0)
-
-    loss = reconstruction_loss.clone()
-    if model.is_continuous:
-        continuous_kl = model.continuous_kl
-        loss += gamma * torch.abs(continuous_kl - C_cont)
-    else:
-        continuous_kl = np.nan
-    if model.is_discrete:
-        disc_kl = model.discrete_kl
-        loss += gamma * torch.abs(disc_kl - C_disc)
-    else:
-        disc_kl = np.nan
-    return loss, reconstruction_loss, continuous_kl, disc_kl
