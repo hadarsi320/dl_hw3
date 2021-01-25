@@ -8,8 +8,6 @@ from tqdm import tqdm
 from celeba_dataset import CelebADataset
 from modules.joint_vae import JointVAE
 
-from sklearn.svm import LinearSVC
-
 
 def interpolate_gif(vae: JointVAE, filename, x_1, x_2, n=100):
     z_1 = vae.hidden_to_latent(x_1.unsqueeze(0))
@@ -53,31 +51,6 @@ def plot_metrics(path, metrics: dict):
     plt.clf()
 
 
-# viz #1
-def find_correlated_dimensions(vae: JointVAE, dataloader):
-    latents = []
-    labels = []
-    for batch, batch_labels in tqdm(dataloader, desc='Encoding Dataset'):
-        latents.append(vae.get_latent(batch.cuda()).cpu())
-        labels.append(batch_labels)
-
-    latents = torch.cat(latents)
-    labels = torch.cat(labels)
-
-    scores = {}
-    for i in range(vae.latent_cont_dim - 1):
-        for j in range(i + 1, vae.latent_cont_dim):
-            for label in labels.shape[1]:
-                X = latents[:, [i, j]]
-                Y = labels[:, label]
-                linear_classifier = LinearSVC(dual=False).fit(X, Y)
-                scores[(i, j, label)] = linear_classifier.score(X, Y)
-
-    for i, j, label in sorted(scores)[:1]:
-        data = latents[:, [i, j]]
-        plt.scatter(data[0], data[j], )
-
-
 def vis2(vae: JointVAE, dataloader):
     latents = []
     labels = []
@@ -93,12 +66,14 @@ if __name__ == '__main__':
     train_loader = DataLoader(
         dataset=train_dataset,
         batch_size=64,
-        shuffle=True
+        shuffle=True,
+        num_workers=6
     )
 
     checkpoint = torch.load('logs/full-150epochs/checkpoint_149.pt')
-    model = JointVAE(latent_spec={'cont': 32, 'disc': [10]}).cuda()
+    model = JointVAE(latent_spec={'cont': 32, 'disc': [10]})
     model.load_state_dict(checkpoint['model_state_dict'])
+    model.to('cuda')
     model.eval()
 
     vis2(model, train_loader)
