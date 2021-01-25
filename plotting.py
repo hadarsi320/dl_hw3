@@ -44,5 +44,5 @@ def plot_metrics(path, metrics: dict):
     plt.xlabel("Epochs")
     plt.ylabel("KL Divergence")
     plt.legend()
-    plt.savefig(f"{path}/reconstruction_loss.jpg", dpi=140)
+    plt.savefig(f"{path}/kl.jpg", dpi=140)
     plt.clf()
