@@ -77,7 +77,7 @@ def make_image_grid(path, epoch, images):
     plt.imshow(img)
     plt.title(f"epoch {epoch}")
     plt.savefig(f"{path}/faces_{epoch}.jpg")
-    plt.show()
+    plt.clf()
     return img
 
 
