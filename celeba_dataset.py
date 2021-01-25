@@ -14,7 +14,7 @@ class CelebADataset(Dataset):
     def load_images(self):
         images = []
         labels = []
-        for file in tqdm(os.listdir(self.data_dir), desc="load_images"):
+        for file in tqdm(os.listdir(self.data_dir), desc='Loading Images'):
             image, label = torch.load(f'{self.data_dir}/{file}')
             images.append(image)
             labels.append(label)

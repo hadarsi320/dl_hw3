@@ -25,10 +25,11 @@ def compute_loss(model: JointVAE, batch, reconst, gamma, C_cont, C_disc):
 
 
 @torch.no_grad()
-def eval_model_reconstruction(model: JointVAE, dataloader):
+def eval_model_reconstruction(model: JointVAE, dataloader,
+                              loss_function='BCELoss'):
+    criterion = getattr(torch.nn, loss_function)(reduction='sum')
     loss = 0
     for batch, _ in tqdm(dataloader):
         batch = batch.cuda()
-        reconst = model(batch)
-        loss += F.binary_cross_entropy(reconst, batch, reduction='sum').item()
+        loss += criterion(model(batch), batch).item()
     return loss / len(dataloader.dataset)
