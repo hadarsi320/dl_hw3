@@ -9,30 +9,30 @@ EPS = 1e-20
 
 
 class JointVAE(nn.Module):
-    def __init__(self, latent_spec, temperature, hard=True, hidden_dim=256):
+    def __init__(self, latent_spec, temperature=0.67, hard=True, hidden_dim=256):
         super(JointVAE, self).__init__()
 
-        self.hard = hard
-        self.temperature = temperature
-        self.hidden_dim = hidden_dim
-        self.latent_spec = latent_spec
-        self.max_disc_capacity = sum([math.log(dim) for dim in self.latent_spec['disc']])
+        self._hard = hard
+        self._temperature = temperature
+        self._hidden_dim = hidden_dim
+        self._latent_spec = latent_spec
+        self._max_disc_capacity = sum([math.log(dim) for dim in self._latent_spec['disc']])
 
         self.continuous_kl = 0
         self.discrete_kl = 0
 
-        self.is_continuous = 'cont' in self.latent_spec
-        self.is_discrete = 'disc' in self.latent_spec
+        self.is_continuous = 'cont' in self._latent_spec
+        self.is_discrete = 'disc' in self._latent_spec
 
         # Calculate dimensions of latent distribution
         if self.is_continuous:
-            self.latent_cont_dim = self.latent_spec['cont']
+            self.latent_cont_dim = self._latent_spec['cont']
         else:
             self.latent_cont_dim = 0
 
         if self.is_discrete:
-            self.latent_disc_dim = sum(self.latent_spec['disc'])
-            self.num_disc_latents = len(self.latent_spec['disc'])
+            self.latent_disc_dim = sum(self._latent_spec['disc'])
+            self.num_disc_latents = len(self._latent_spec['disc'])
         else:
             self.latent_disc_dim = 0
             self.num_disc_latents = 0
@@ -48,20 +48,20 @@ class JointVAE(nn.Module):
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(4, 4), stride=2, padding=1),
             nn.ReLU(),
             nn.Flatten(start_dim=1),
-            nn.Linear(64 * 4 * 4, self.hidden_dim),
+            nn.Linear(64 * 4 * 4, self._hidden_dim),
             nn.ReLU(),
         )
 
         # Encode parameters of latent distribution
         if self.is_continuous:
-            self.fc_mean = nn.Linear(self.hidden_dim, self.latent_cont_dim)
-            self.fc_log_var = nn.Linear(self.hidden_dim, self.latent_cont_dim)
+            self.fc_mean = nn.Linear(self._hidden_dim, self.latent_cont_dim)
+            self.fc_log_var = nn.Linear(self._hidden_dim, self.latent_cont_dim)
         if self.is_discrete:
             # Linear layer for each of the categorical distributions
             fc_alphas = []
-            for disc_dim in self.latent_spec['disc']:
+            for disc_dim in self._latent_spec['disc']:
                 fc_alphas.append(nn.Sequential(
-                    nn.Linear(self.hidden_dim, disc_dim),
+                    nn.Linear(self._hidden_dim, disc_dim),
                     nn.Softmax(dim=1)
                 ))
             self._fc_alphas = nn.ModuleList(fc_alphas)
@@ -126,9 +126,9 @@ class JointVAE(nn.Module):
         if self.training:
             log_alpha = torch.log(alpha + EPS)
             gumbel_noise = utils.sample_gumbel(alpha.shape)
-            y_soft = F.softmax((log_alpha + gumbel_noise) / self.temperature, dim=1)
+            y_soft = F.softmax((log_alpha + gumbel_noise) / self._temperature, dim=1)
 
-            if self.hard:
+            if self._hard:
                 k = torch.argmax(y_soft, dim=-1)
                 y_hard = F.one_hot(k, num_classes=alpha.shape[1])
                 y = y_hard - y_soft.detach() + y_soft
@@ -142,4 +142,4 @@ class JointVAE(nn.Module):
             return y
 
     def get_max_disc_capacity(self):
-        return self.max_disc_capacity
+        return self._max_disc_capacity
