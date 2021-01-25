@@ -2,7 +2,10 @@ import numpy as np
 import torch
 from PIL import Image
 from matplotlib import pyplot as plt
+from torch.utils.data import DataLoader
+from tqdm import tqdm
 
+from celeba_dataset import CelebADataset
 from modules.joint_vae import JointVAE
 
 
@@ -46,3 +49,29 @@ def plot_metrics(path, metrics: dict):
     plt.legend()
     plt.savefig(f"{path}/kl.jpg", dpi=140)
     plt.clf()
+
+# viz #1
+def find_correlated_dimensions(vae: JointVAE, dataloader):
+    latents = []
+    labels = []
+    for batch, batch_labels in tqdm(dataloader, desc='Encoding Dataset'):
+        latents.append(vae.get_latent(batch).cpu())
+        labels.append(batch_labels)
+    latents = torch.cat(latents)
+    labels = torch.cat(labels)
+
+
+if __name__ == '__main__':
+    train_dataset = CelebADataset('celeba_resized')
+    train_loader = DataLoader(
+        dataset=train_dataset,
+        batch_size=64,
+        shuffle=True
+    )
+
+    checkpoint = torch.load('logs/full-150epochs/checkpoint_149.pt')
+    model = JointVAE(latent_spec={'cont': 32, 'disc': [10]}).cpu()
+    model.load_state_dict(checkpoint['model_state_dict'])
+    model.eval()
+
+    find_correlated_dimensions(model, train_loader)
