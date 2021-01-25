@@ -31,6 +31,7 @@ def main(hparams, train_loader):
     prefix = "full"
     model_name = f"{prefix}__{strftime('%Y_%m_%d__%H_%M_%S')}"
     device = "cuda"
+    print(hparams)
 
     model = JointVAE(
         latent_spec=hparams["latent_spec"],

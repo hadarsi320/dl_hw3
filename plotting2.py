@@ -51,17 +51,6 @@ def plot_metrics(path, metrics: dict):
     plt.clf()
 
 
-# viz #1
-def find_correlated_dimensions(vae: JointVAE, dataloader):
-    latents = []
-    labels = []
-    for batch, batch_labels in tqdm(dataloader, desc='Encoding Dataset'):
-        latents.append(vae.get_latent(batch).cpu())
-        labels.append(batch_labels)
-    latents = torch.cat(latents)
-    labels = torch.cat(labels)
-
-
 def vis2(vae: JointVAE, dataloader):
     latents = []
     labels = []
@@ -77,12 +66,14 @@ if __name__ == '__main__':
     train_loader = DataLoader(
         dataset=train_dataset,
         batch_size=64,
-        shuffle=True
+        shuffle=True,
+        num_workers=6
     )
 
     checkpoint = torch.load('logs/full-150epochs/checkpoint_149.pt')
-    model = JointVAE(latent_spec={'cont': 32, 'disc': [10]}).cuda()
+    model = JointVAE(latent_spec={'cont': 32, 'disc': [10]})
     model.load_state_dict(checkpoint['model_state_dict'])
+    model.to('cuda')
     model.eval()
 
     vis2(model, train_loader)
