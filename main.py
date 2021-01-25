@@ -80,7 +80,7 @@ if __name__ == '__main__':
         "temperature": 0.67,
         "batch_size": 64,
         "lr": 5e-4,
-        "epochs": 100,
+        "epochs": 150,
         "gamma": 100,
         "C_cont": {"min_val": 0, "max_val": 10, "total_iters": 100000},
         "C_disc": {"min_val": 0, "max_val": 50, "total_iters": 100000},
@@ -88,27 +88,27 @@ if __name__ == '__main__':
     main(hparams, train_loader)
 
     # run 2: check how temp affects, low epochs so we don't waste time
-    for temp in [0.1, 0.33, 1, 5]:
-        hparams = {
-            "latent_spec": {'cont': 32, 'disc': [10]},
-            "temperature": temp,
-            "batch_size": 64,
-            "lr": 5e-4,
-            "epochs": 30,
-            "gamma": 100,
-            "C_cont": {"min_val": 0, "max_val": 10, "total_iters": 100000},
-            "C_disc": {"min_val": 0, "max_val": 50, "total_iters": 100000},
-        }
-        main(hparams, train_loader)
+    # for temp in [0.1, 0.33, 1, 5]:
+    #     hparams = {
+    #         "latent_spec": {'cont': 32, 'disc': [10]},
+    #         "temperature": temp,
+    #         "batch_size": 64,
+    #         "lr": 5e-4,
+    #         "epochs": 30,
+    #         "gamma": 100,
+    #         "C_cont": {"min_val": 0, "max_val": 10, "total_iters": 100000},
+    #         "C_disc": {"min_val": 0, "max_val": 50, "total_iters": 100000},
+    #     }
+    #     main(hparams, train_loader)
 
     # run 3: check how gamma affects, low epochs so we don't waste time
-    for gamma in [1, 10, 100, 1000]:
+    for gamma in [1, 10, 1000]:
         hparams = {
             "latent_spec": {'cont': 32, 'disc': [10]},
             "temperature": 0.67,
             "batch_size": 64,
             "lr": 5e-4,
-            "epochs": 30,
+            "epochs": 50,
             "gamma": gamma,
             "C_cont": {"min_val": 0, "max_val": 10, "total_iters": 100000},
             "C_disc": {"min_val": 0, "max_val": 50, "total_iters": 100000},
@@ -131,7 +131,7 @@ if __name__ == '__main__':
             main(hparams, train_loader)
 
     # run 5: check how C_cont affects, low epochs so we don't waste time
-    for max_Cc in [1, 10, 100, 1000]:
+    for max_Cc in [1, 100, 1000]:
         hparams = {
             "latent_spec": {'cont': 32, 'disc': [10]},
             "temperature": 0.67,
