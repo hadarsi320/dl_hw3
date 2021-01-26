@@ -4,10 +4,14 @@ import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
+import data
+
 
 class CelebADataset(Dataset):
     def __init__(self, data_dir='celeba_resized', limit=None):
         super(CelebADataset, self).__init__()
+        if not os.path.exists(data_dir):
+            data.resize_data()
         self.data_dir = data_dir
         self.images, self.labels = self.load_images(limit)
 
