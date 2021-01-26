@@ -1,21 +1,17 @@
-import os
-
 import numpy as np
 import torch
+import torchvision
 from PIL import Image
 from matplotlib import pyplot as plt
 from sklearn.svm import LinearSVC
 from torch.utils.data import DataLoader
 from torch.utils.data import TensorDataset
+from torchvision.transforms import Resize, ToTensor
 from tqdm import tqdm
 
 import utils
-from celeba_dataset import CelebADataset
 from modules.autoencoder import Autoencoder
 from modules.joint_vae import JointVAE
-
-from torchvision.transforms import Resize, ToTensor
-from PIL import Image
 
 CONT_DIM = 32
 VIZ_DIR = 'viz'
@@ -232,67 +228,3 @@ def vis2(vae: JointVAE, dataloader, image_id, ncols=10):
         col_spaces.append(col_space)
 
     return image_grids, col_spaces
-
-
-def main():
-    torch.manual_seed(32)
-    train_dataset = CelebADataset('celeba_resized', limit=5000)
-    train_loader = DataLoader(
-        dataset=train_dataset,
-        batch_size=64,
-        shuffle=True
-    )
-
-    checkpoint = torch.load('logs/full-150epochs/checkpoint_149.pt')
-    model = JointVAE(latent_spec={'cont': 32, 'disc': [10]}).cuda()
-    model.load_state_dict(checkpoint['model_state_dict'])
-    model.eval()
-
-    with torch.no_grad():
-        latents = []
-        labels = []
-        for batch, batch_labels in tqdm(train_loader, desc='Encoding Dataset'):
-            latents.append(model.get_latent(batch.cuda()).cpu())
-            labels.append(batch_labels)
-
-        latents = torch.cat(latents)
-        labels = torch.cat(labels)
-    continuous_latents = latents[:, :model.latent_cont_dim]
-
-    # varied_dims = (latents.var(dim=0) > latents.var(dim=0).mean())[:32]
-    # manipulations = {}
-    # for dim, val in enumerate(varied_dims):
-    #     if val:
-    #         manipulations[dim] = (min(latents[:, dim]), max(latents[:, dim]))
-    # play_with_friends(model, 'our_images/hadar.jpg', manipulations)
-
-    # show_label_variance(latents)
-    label_names = utils.get_label_names()
-    varied_latents = latents[:, latents.var(dim=0) > latents.var(dim=0).mean()]
-    # find_correlated_dimensions(continuous_latents, labels, label_names)
-    # find_dim_label_corr(continuous_latents, labels, label_names, [6, 7, 9, 19, 20])
-    project_2d(varied_latents, labels, label_names)
-
-    # viz 2
-    image_id = 2
-    ncols = 10
-    image_grids, col_spaces = vis2(model, train_loader, image_id, ncols)
-
-    for i, (img, col_space) in enumerate(zip(image_grids, col_spaces)):
-        if i not in {9, 7, 20, 28}:
-            continue
-        plt.imshow(img)
-        # plt.title(f"Image ID: {image_id}\nLatent variable: z_{i}")
-
-        plt.xticks(ticks=np.linspace(0, len(img[0]), num=3),
-                   labels=[col_space[0], col_space[round(len(col_space) / 2)], col_space[-1]])
-
-        yticks = [n for n in np.linspace(0, len(img), num=10)]
-        plt.yticks(ticks=yticks, labels=[f"{i}" for i in range(10)])
-        # plt.savefig(f"{VIZ_DIR}/viz1_z_{i}.jpg", dpi=300)
-        plt.show()
-        plt.clf()
-
-
-if __name__ == '__main__':
-    main()
