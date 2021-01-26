@@ -1,4 +1,6 @@
 from torch import nn
+from torch import optim
+from tqdm import tqdm
 
 
 class Autoencoder(nn.Module):
@@ -19,3 +21,15 @@ class Autoencoder(nn.Module):
 
     def decode(self, x):
         return self._decoder(x)
+
+    def train_model(self, dataloader, num_epochs,
+                    loss_type='MSELoss', learning_rate=1e-3):
+        loss_function = getattr(nn, loss_type)()
+        optimizer = optim.Adam(self.parameters(), lr=learning_rate)
+        for _ in tqdm(range(num_epochs), 'Training AE'):
+            for [batch] in dataloader:
+                optimizer.zero_grad()
+                reconst = self(batch)
+                loss = loss_function(reconst, batch)
+                loss.backward()
+                optimizer.step()
