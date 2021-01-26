@@ -75,13 +75,40 @@ def find_correlated_dimensions(cont_latents, labels, label_names):
 
     for i, j, k in sorted(scores, key=lambda x: scores[x][2], reverse=True)[:10]:
         X, Y, score = scores[(i, j, k)]
+        print(f'Latent dims ({i}, {j}) Label {label_names[k]} Score {score}')
 
-        plt.scatter(X[~Y][:, 0], X[~Y][:, 1], label='Label = 0')
-        plt.scatter(X[Y][:, 0], X[Y][:, 1], label='Label = 1')
+        plt.scatter(X[~Y][:, 0], X[~Y][:, 1], label='Label = 0', alpha=0.5)
+        plt.scatter(X[Y][:, 0], X[Y][:, 1], label='Label = 1', alpha=0.5)
         plt.legend()
         plt.xlabel(f'{i}')
         plt.ylabel(f'{j}')
-        plt.title(f'Label {label_names[k]} \nIndices {i} {j} Score {score}')
+        plt.title(f'Label {label_names[k]} \nContinuous Latent Dimensions {i}, {j}')
+        plt.show()
+
+
+def find_dim_label_corr(cont_latents, labels, label_names, target_dims):
+    scores = {}
+    for i in tqdm(target_dims, 'i'):
+        for k in range(labels.shape[1]):
+            X = cont_latents[:, [i]]
+            Y = labels[:, k]
+            X, Y = utils.under_sample(X, Y, n=100)
+
+            linear_classifier = LinearSVC(dual=False).fit(X, Y)
+            scores[(i, k)] = X, Y, linear_classifier.score(X, Y)
+
+    for index, (i, k) in enumerate(sorted(scores, key=lambda x: scores[x][2], reverse=True)[:10]):
+        X, Y, score = scores[(i, k)]
+        print(f'{index}. Latent dim {i} Label {label_names[k]} Score {score}')
+
+        plt.vlines(X[~Y][:, 0], -1, 1, colors='blue',
+                   label='Label = 0', alpha=0.5)
+        plt.vlines(X[Y][:, 0], -1, 1, colors='orange',
+                   label='Label = 1', alpha=0.5)
+        plt.legend()
+        plt.yticks([])
+        # plt.xlabel(f'{i}')
+        # plt.title(f'Label {label_names[k]} \nContinuous Latent Dimension {i}')
         plt.show()
 
 
@@ -132,16 +159,20 @@ def play_with_friends(model, image_file, manipulations):
     latent_o = model.get_latent(image.unsqueeze(0))
     discrete_index = [i for i, val in enumerate(latent_o[:, 32:].squeeze()) if val == 1][0]
     for i in manipulations:
-        fig, (ax1, ax2) = plt.subplots(ncols=2)
+        fig, (ax1, ax2, ax3) = plt.subplots(ncols=3)
         min, max = manipulations[i]
+        middle = (max + min) / 2
         latent = torch.clone(latent_o)
 
-        fig.suptitle(f'Dimension {i} Discrete variable {discrete_index+1}')
+        fig.suptitle(f'Dimension {i} Discrete variable {discrete_index + 1}')
         latent[0, i] = min
         plot_image(model.decode(latent).squeeze(), title='Min', axe=ax1)
 
+        latent[0, i] = middle
+        plot_image(model.decode(latent).squeeze(), title='Middle', axe=ax2)
+
         latent[0, i] = max
-        plot_image(model.decode(latent).squeeze(), title='Max', axe=ax2)
+        plot_image(model.decode(latent).squeeze(), title='Max', axe=ax3)
         plt.savefig(f'viz/{name}_{i}')
         plt.show()
 
@@ -163,6 +194,7 @@ def plot_image(image, title=None, axe=None):
 
 
 def main():
+    torch.manual_seed(32)
     train_dataset = CelebADataset('celeba_resized', limit=5000)
     train_loader = DataLoader(
         dataset=train_dataset,
@@ -184,19 +216,21 @@ def main():
 
         latents = torch.cat(latents)
         labels = torch.cat(labels)
+    continuous_latents = latents[:, :model.latent_cont_dim]
 
-    varied_dims = (latents.var(dim=0) > latents.var(dim=0).mean())[:32]
-    manipulations = {}
-    for dim, val in enumerate(varied_dims):
-        if val:
-            manipulations[dim] = (min(latents[:, dim]), max(latents[:, dim]))
-    play_with_friends(model, 'our_images/hamir_tazan.jpeg', manipulations)
+    # varied_dims = (latents.var(dim=0) > latents.var(dim=0).mean())[:32]
+    # manipulations = {}
+    # for dim, val in enumerate(varied_dims):
+    #     if val:
+    #         manipulations[dim] = (min(latents[:, dim]), max(latents[:, dim]))
+    # play_with_friends(model, 'our_images/hadar.jpg', manipulations)
 
     # show_label_variance(latents)
-    # label_names = utils.get_label_names()
-    # varied_latents = latents[:, latents.var(dim=0) > latents.var(dim=0).mean()]
-    # project_2d(varied_latents, labels, label_names)
-    # find_correlated_dimensions(latents[:, :model.latent_cont_dim], labels, label_names)
+    label_names = utils.get_label_names()
+    varied_latents = latents[:, latents.var(dim=0) > latents.var(dim=0).mean()]
+    # find_correlated_dimensions(continuous_latents, labels, label_names)
+    # find_dim_label_corr(continuous_latents, labels, label_names, [6, 7, 9, 19, 20])
+    project_2d(varied_latents, labels, label_names)
 
 
 if __name__ == '__main__':
