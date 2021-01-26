@@ -127,7 +127,7 @@ def main():
     model.to('cuda')
     model.eval()
 
-    image_id = 0
+    image_id = 2
     ncols = 10
     image_grids, col_spaces = vis2(model, train_loader, image_id, ncols)
 
