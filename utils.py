@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import torch
 
 
@@ -26,4 +27,14 @@ def log_run(log_dir, model_name, model, hparams):
 
 def get_label_names(file='/datashare/celeba/list_attr_celeba.txt'):
     line = open(file).readlines()[1]
-    return line.split()
+    return np.array(line.split())
+
+
+def under_sample(data, labels, n=100):
+    data_0 = data[~labels][:n]
+    data_1 = data[labels][:n]
+    if len(data_0) < n or len(data_1) < n:
+        return None
+    new_labels = torch.zeros(2 * n, dtype=torch.bool)
+    new_labels[n:] = 1
+    return torch.cat([data_0, data_1]), new_labels
