@@ -14,7 +14,6 @@ from torch.utils.data import DataLoader
 import utils
 from celeba_dataset import CelebADataset
 from modules.joint_vae import JointVAE
-from plotting import plot_metrics
 from train import train_vae
 from utils import log_run
 
@@ -75,4 +74,9 @@ def reproduce_hw3():
         device=device
     )
 
-    plot_metrics(path, metrics)
+    torch.save(model, f'{model_name}.pt')
+    return model
+
+
+if __name__ == '__main__':
+    reproduce_hw3()
