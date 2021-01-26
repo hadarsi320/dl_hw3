@@ -22,3 +22,8 @@ def log_run(log_dir, model_name, model, hparams):
     with open(f"{path}/description.txt", "w") as f:
         hparams_string = "\n".join([f"\t{k:30} {v}" for k, v in hparams.items()])
         f.writelines([model_name, "\n\n", str(model), "\n\n", "hparams:\n", hparams_string])
+
+
+def get_label_names(file='/datashare/celeba/list_attr_celeba.txt'):
+    line = open(file).readlines()[1]
+    return line.split()
