@@ -132,14 +132,16 @@ def main():
     image_grids, col_spaces = vis2(model, train_loader, image_id, ncols)
 
     for i, (img, col_space) in enumerate(zip(image_grids, col_spaces)):
+        if i not in {9, 7, 20, 28}:
+            continue
         plt.imshow(img)
-        plt.title(f"Image ID: {image_id}\nLatent variable: z_{i}")
+        # plt.title(f"Image ID: {image_id}\nLatent variable: z_{i}")
 
         plt.xticks(ticks=np.linspace(0, len(img[0]), num=3), labels=[col_space[0], col_space[round(len(col_space) / 2)], col_space[-1]])
 
         yticks = [n for n in np.linspace(0, len(img), num=10)]
-        plt.yticks(ticks=yticks, labels=[f"Discrete {i}" for i in range(10)])
-        plt.savefig(f"{VIZ_DIR}/img_{image_id}__z_{i}.jpg", dpi=300)
+        plt.yticks(ticks=yticks, labels=[f"{i}" for i in range(10)])
+        plt.savefig(f"{VIZ_DIR}/viz1_z_{i}.jpg", dpi=300)
         plt.clf()
 
 
