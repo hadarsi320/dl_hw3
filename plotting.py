@@ -17,24 +17,8 @@ from modules.joint_vae import JointVAE
 from torchvision.transforms import Resize, ToTensor
 from PIL import Image
 
-
-def interpolate_gif(vae: JointVAE, filename, x_1, x_2, n=100):
-    z_1 = vae.hidden_to_latent(x_1.unsqueeze(0))
-    z_2 = vae.hidden_to_latent(x_2.unsqueeze(0))
-
-    z = torch.stack([z_1 + (z_2 - z_1) * t for t in np.linspace(0, 1, n)])
-
-    interpolate_list = vae.decode(z)
-    interpolate_list = interpolate_list.to('cpu').detach().numpy() * 255
-
-    images_list = [Image.fromarray(img.reshape(28, 28)).resize((256, 256)) for img in interpolate_list]
-    images_list = images_list + images_list[::-1]  # loop back beginning
-
-    images_list[0].save(
-        f'{filename}.gif',
-        save_all=True,
-        append_images=images_list[1:],
-        loop=1)
+CONT_DIM = 32
+VIZ_DIR = 'viz'
 
 
 def plot_metrics(path, metrics: dict):
@@ -193,6 +177,63 @@ def plot_image(image, title=None, axe=None):
         axe.set_yticks([])
 
 
+def get_latent_labels(vae: JointVAE, dataloader, device='cuda'):
+    latents = []
+    labels = []
+    for batch, batch_labels in tqdm(dataloader, desc='Encoding Dataset'):
+        latents.append(vae.get_latent(batch.to(device)))
+        labels.append(batch_labels.to(device))
+    latents = torch.cat(latents)
+    labels = torch.cat(labels)
+
+    return latents, labels
+
+
+def get_latent_boundaries(latents, i):
+    return latents[:, i].min().item(), latents[:, i].max().item()
+
+
+def vis2(vae: JointVAE, dataloader, image_id, ncols=10):
+    latents, _ = get_latent_labels(vae, dataloader)
+    latent_boundaries = [get_latent_boundaries(latents, i) for i in range(CONT_DIM)]
+    img_latent = latents[image_id]  # get an arbitrary image's latent space
+    image_grids = []
+    col_spaces = []
+
+    disc_dim = len(img_latent) - CONT_DIM
+
+    # for each direction in the latent dim
+    for i in range(len(img_latent)):
+        if i == CONT_DIM:
+            break
+
+        z_i_min = latent_boundaries[i][0]
+        z_i_max = latent_boundaries[i][1]
+        tmp = img_latent.clone()
+        tmp[CONT_DIM:] = torch.zeros_like(tmp[CONT_DIM:])
+
+        img_grid = []
+        col_space = []
+        # create img_grid rows: iterate discrete dim
+        for disc_idx in range(CONT_DIM, CONT_DIM + disc_dim):
+            tmp[disc_idx] = 1.0
+
+            # create img_grid cols: set all variables besides the current z_i
+            col_space = [round(n, 3) for n in np.linspace(z_i_min, z_i_max, num=ncols)]
+            for val in col_space:
+                tmp[i] = val
+                img_grid.append(vae.decode(tmp.unsqueeze(0)))
+
+            tmp[disc_idx] = 0.0
+
+        img_grid = torch.cat(img_grid)
+        img_grid = torchvision.utils.make_grid(img_grid, nrow=ncols).permute(1, 2, 0).cpu().detach().numpy()
+        image_grids.append(img_grid)
+        col_spaces.append(col_space)
+
+    return image_grids, col_spaces
+
+
 def main():
     torch.manual_seed(32)
     train_dataset = CelebADataset('celeba_resized', limit=5000)
@@ -231,6 +272,26 @@ def main():
     # find_correlated_dimensions(continuous_latents, labels, label_names)
     # find_dim_label_corr(continuous_latents, labels, label_names, [6, 7, 9, 19, 20])
     project_2d(varied_latents, labels, label_names)
+
+    # viz 2
+    image_id = 2
+    ncols = 10
+    image_grids, col_spaces = vis2(model, train_loader, image_id, ncols)
+
+    for i, (img, col_space) in enumerate(zip(image_grids, col_spaces)):
+        if i not in {9, 7, 20, 28}:
+            continue
+        plt.imshow(img)
+        # plt.title(f"Image ID: {image_id}\nLatent variable: z_{i}")
+
+        plt.xticks(ticks=np.linspace(0, len(img[0]), num=3),
+                   labels=[col_space[0], col_space[round(len(col_space) / 2)], col_space[-1]])
+
+        yticks = [n for n in np.linspace(0, len(img), num=10)]
+        plt.yticks(ticks=yticks, labels=[f"{i}" for i in range(10)])
+        # plt.savefig(f"{VIZ_DIR}/viz1_z_{i}.jpg", dpi=300)
+        plt.show()
+        plt.clf()
 
 
 if __name__ == '__main__':
